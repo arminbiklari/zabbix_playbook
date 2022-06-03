@@ -1,0 +1,51 @@
+---
+- hosts: ubuntuservers
+  gather_facts: true
+  tasks:
+    # ------------------------------------------------------------------------------#
+    - name: check service status
+      stat: path=/etc/init.d/zabbix-agentd
+      register: result
+    # ------------------------------------------------------------------------------#
+    # - name: configure repo
+    #   shell: wget https://repo.zabbix.com/zabbix/5.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_5.0-1+{{ansible_distribution_release}}_all.deb  -O /tmp/zabbix-release_5.0-1.deb && sudo dpkg -i /tmp/zabbix-release_5.0-1.deb
+    # - name: update packages
+    #   apt:
+    #     name: zabbix-agent
+    #     update_cache: yes
+    #   when:
+    #     - ansible_os_family == 'Debian'
+    #     - result.stat.exists == False
+    # -----------------------------------------------------------------------------#
+    - name: copy deb file to hosts
+      ansible.builtin.copy:
+        src: /home/armin/ansible/zabbix-project/pkg/zabbix-agent_5.0.0-1+{{ansible_distribution_release}}_amd64.deb
+        dest: "{{ destpkg }}"
+      when:
+        - ansible_os_family == 'Debian'
+        - ansible_distribution == 'Ubuntu'
+        - result.stat.exists == False
+    # ------------------------------------------------------------------------------#
+    - name: install deb (bionic)
+      apt:
+        deb: "{{destpkg}}"
+      when:
+        - ansible_os_family == 'Debian'
+      register: offline_installation
+      ignore_errors: yes
+    # ------------------------------------------------------------------------------#
+    - name: replace zabbix_agentd.conf
+      template:
+        src: /home/armin/ansible/zabbix-project/conf/zabbix_agentd-bionic.conf.j2
+        dest: /etc/zabbix/zabbix_agentd.conf
+        owner: root
+        group: root
+        mode: 0744
+        backup: yes
+    # ------------------------------------------------------------------------------#
+    - name: check zabbix agent status
+      ansible.builtin.service:
+        name: zabbix-agent
+        enabled: yes
+        state: restarted
+    # ------------------------------------------------------------------------------#

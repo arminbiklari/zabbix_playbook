@@ -1,0 +1,24 @@
+---
+- host: ZabbixServers
+  gather_facts: true
+  tasks:
+    - name: Create a new host or update an existing host's info
+      local_action:
+        module: zabbix_host
+        server_url: "{{zabbix_server}}"
+        login_user: zabbix-admin
+        login_password: zabbix-admin-password
+        host_name: "{{ansible_hostname}}"
+        host_groups:
+          - Virtual machines
+          - Azure - Cluster Kubernetes
+        link_templates:
+          - Template OS Linux
+          - Template App Docker
+        interfaces:
+          - type: 1
+            main: 1
+            useip: 1
+            ip: "{{ansible_ssh_host}}"
+            dns: ""
+            port: 10050
